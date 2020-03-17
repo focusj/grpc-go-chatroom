@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/keepalive"
+	"math/rand"
 	"time"
 
 	pb "github.com/focusj/grpc-go-chatroom/chatroom"
@@ -17,18 +19,18 @@ var (
 
 func chat(sender int64, stream pb.ChatRoom_ChatClient) {
 	for {
-		//message := pb.Message{
-		//	Id:       rand.Int63(),
-		//	GroupId:  1,
-		//	Sender:   sender,
-		//	Content:  fmt.Sprintf("greet from: %d", sender),
-		//	Type:     0,
-		//	SendTime: time.Now().UnixNano(),
-		//}
-		//err := stream.Send(&message)
-		//if err != nil {
-		//	grpclog.Info(err)
-		//}
+		message := pb.Message{
+			Id:       rand.Int63(),
+			GroupId:  1,
+			Sender:   sender,
+			Content:  fmt.Sprintf("greet from: %d", sender),
+			Type:     0,
+			SendTime: time.Now().UnixNano(),
+		}
+		err := stream.Send(&message)
+		if err != nil {
+			grpclog.Info(err)
+		}
 		time.Sleep(1 * time.Second)
 	}
 }
@@ -65,6 +67,7 @@ func main() {
 			msg, err := stream.Recv()
 			if err != nil {
 				grpclog.Error(err)
+				return
 			}
 			grpclog.Infof("receive a message from: %d, detail is: %s", msg.Sender, msg.Content)
 		}
