@@ -3,7 +3,8 @@ syntax = "proto3";
 package routeguide;
 
 service ChatRoom {
-    rpc Chat(Message) returns (Empty) {}
+    rpc Chat (stream Message) returns (stream Message) {
+    }
 }
 
 message User {
@@ -13,10 +14,11 @@ message User {
 
 message Message {
     int64 id = 1;
-    int64 chat_id = 2;
+    int64 group_id = 2;
     int64 sender = 3;
     string content = 4;
-    int64 send_time = 5;
+    int32 type = 5;
+    int64 send_time = 6;
 }
 
 message Empty {
@@ -26,5 +28,5 @@ message Empty {
 message Group {
     int64 id = 1;
     string name = 2;
-    repeated User members = 3;
+    repeated int64 members = 3;
 }
