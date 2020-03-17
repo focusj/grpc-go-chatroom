@@ -5,7 +5,9 @@ import (
 	"github.com/focusj/grpc-go-chatroom/service"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
+	"google.golang.org/grpc/keepalive"
 	"net"
+	"time"
 )
 
 func main() {
@@ -14,7 +16,16 @@ func main() {
 		grpclog.Fatalf("failed to listen: %v", err)
 	}
 
-	server := grpc.NewServer()
+	keepaliveOpts := keepalive.ServerParameters{
+		MaxConnectionIdle:     10 * time.Second,
+		Time:                  1 * time.Second,
+		Timeout:               1 * time.Second,
+	}
+
+	server := grpc.NewServer(grpc.KeepaliveParams(keepaliveOpts))
 	chantroom.RegisterChatRoomServer(server, service.New())
-	server.Serve(listen)
+	err = server.Serve(listen)
+	if err != nil {
+		grpclog.Fatalf("server failed: %+v", err)
+	}
 }

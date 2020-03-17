@@ -3,10 +3,9 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
-	"math/rand"
+	"google.golang.org/grpc/keepalive"
 	"time"
 
 	pb "github.com/focusj/grpc-go-chatroom/chatroom"
@@ -18,18 +17,18 @@ var (
 
 func chat(sender int64, stream pb.ChatRoom_ChatClient) {
 	for {
-		message := pb.Message{
-			Id:       rand.Int63(),
-			GroupId:  1,
-			Sender:   sender,
-			Content:  fmt.Sprintf("greet from: %d", sender),
-			Type:     0,
-			SendTime: time.Now().UnixNano(),
-		}
-		err := stream.Send(&message)
-		if err != nil {
-			grpclog.Info(err)
-		}
+		//message := pb.Message{
+		//	Id:       rand.Int63(),
+		//	GroupId:  1,
+		//	Sender:   sender,
+		//	Content:  fmt.Sprintf("greet from: %d", sender),
+		//	Type:     0,
+		//	SendTime: time.Now().UnixNano(),
+		//}
+		//err := stream.Send(&message)
+		//if err != nil {
+		//	grpclog.Info(err)
+		//}
 		time.Sleep(1 * time.Second)
 	}
 }
@@ -37,7 +36,16 @@ func chat(sender int64, stream pb.ChatRoom_ChatClient) {
 func main() {
 	flag.Parse()
 
-	conn, err := grpc.Dial("localhost:8888", grpc.WithInsecure())
+	keepaliveParams := keepalive.ClientParameters{
+		Time:                10 * time.Second,
+		Timeout:             1 * time.Second,
+		PermitWithoutStream: true,
+	}
+	conn, err := grpc.Dial(
+		"localhost:8888",
+		grpc.WithInsecure(),
+		grpc.WithKeepaliveParams(keepaliveParams),
+	)
 	if err != nil {
 		grpclog.Fatalf("dial failed: %s", err)
 	}
@@ -55,7 +63,6 @@ func main() {
 	go func() {
 		for {
 			msg, err := stream.Recv()
-			fmt.Println(msg)
 			if err != nil {
 				grpclog.Error(err)
 			}
