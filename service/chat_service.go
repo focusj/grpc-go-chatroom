@@ -22,7 +22,7 @@ type ChatServer struct {
 func (c *ChatServer) register(uid int64, srv cr.ChatRoom_ChatServer) {
 	c.Lock()
 	defer c.Unlock()
-	grpclog.Info("user: ")
+	grpclog.Infof("user of %:d is login", uid)
 	if _, exists := c.channels[uid]; !exists {
 		c.channels[uid] = srv
 	}
@@ -31,6 +31,7 @@ func (c *ChatServer) register(uid int64, srv cr.ChatRoom_ChatServer) {
 func (c *ChatServer) unRegister(uid int64) {
 	c.Lock()
 	defer c.Unlock()
+	grpclog.Infof("user of: %d is logout", uid)
 	delete(c.channels, uid)
 }
 
@@ -55,7 +56,7 @@ func New() *ChatServer {
 	groups := make(map[int64]*cr.Group)
 	groups[1] = &cr.Group{
 		Id:      1,
-		Name:    "group-01",
+		Name:    "grpc-go-chat-group",
 		Members: []int64{1, 2, 3},
 	}
 	channels := make(map[int64]cr.ChatRoom_ChatServer)
