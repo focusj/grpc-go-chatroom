@@ -22,7 +22,7 @@ type ChatServer struct {
 func (c *ChatServer) register(uid int64, srv cr.ChatRoom_ChatServer) {
 	c.Lock()
 	defer c.Unlock()
-	grpclog.Infof("user of %:d is login", uid)
+	grpclog.Infof("user of %d is login", uid)
 	if _, exists := c.channels[uid]; !exists {
 		c.channels[uid] = srv
 	}
@@ -43,10 +43,10 @@ func (c *ChatServer) deliver(groupId int64, msg *cr.Message) {
 			if err != nil {
 				if e, ok := status.FromError(err); ok {
 					if e.Code() == codes.Unavailable {
-						c.unRegister(msg.Sender)
+						c.unRegister(uid)
 					}
 				}
-				grpclog.Error(err)
+				grpclog.Errorf("deliver msg failed: %s", err)
 			}
 		}
 	}
@@ -75,8 +75,15 @@ func (c *ChatServer) Chat(srv cr.ChatRoom_ChatServer) error {
 			break
 		}
 		if err != nil {
-			grpclog.Error(err)
-			break
+			if grpcErr, ok := status.FromError(err); ok {
+				if grpcErr.Code() == codes.Canceled {
+					if sender != 0 {
+						c.unRegister(sender)
+					}
+				}
+			}
+			grpclog.Errorf("chat error: %+v", err)
+			return err
 		}
 		sender = msg.Sender
 
