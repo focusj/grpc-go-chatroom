@@ -39,7 +39,7 @@ func tracingInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.Stream
 }
 
 func main() {
-	listen, err := net.Listen("tcp", "localhost:8888")
+	listen, err := net.Listen("tcp", "0.0.0.0:8888")
 	if err != nil {
 		grpclog.Fatalf("failed to listen: %v", err)
 	}
@@ -55,8 +55,11 @@ func main() {
 		grpc.StreamInterceptor(tracingInterceptor),
 	)
 	chantroom.RegisterChatRoomServer(server, service.New())
+
 	err = server.Serve(listen)
 	if err != nil {
 		grpclog.Fatalf("server failed: %+v", err)
 	}
+
+	grpclog.Infoln("grpc-go-chatroom is up")
 }

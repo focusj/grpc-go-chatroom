@@ -44,7 +44,7 @@ func main() {
 		PermitWithoutStream: true,
 	}
 	conn, err := grpc.Dial(
-		"localhost:8888",
+		"127.0.0.1:8888",
 		grpc.WithInsecure(),
 		grpc.WithKeepaliveParams(keepaliveParams),
 	)
