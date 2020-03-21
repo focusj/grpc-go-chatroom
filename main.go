@@ -1,13 +1,20 @@
 package main
 
 import (
-	chantroom "github.com/focusj/grpc-go-chatroom/chatroom"
+	"flag"
+	"fmt"
+	"github.com/focusj/grpc-go-chatroom/chatroom"
 	"github.com/focusj/grpc-go-chatroom/service"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/keepalive"
 	"net"
 	"time"
+)
+
+var (
+	host = flag.String("host", "0.0.0.0", "remote server address")
+	port = flag.Int64("prot", 8888, "remote server port")
 )
 
 type loggingServerStream struct {
@@ -22,12 +29,12 @@ func newLoggingServerStream(ss grpc.ServerStream) *loggingServerStream {
 func (ss *loggingServerStream) RecvMsg(m interface{}) error {
 	grpclog.Infof("receive message: %T at %s", m, time.Now().Format(time.RFC3339))
 	ss.counter += 1
-	return ss.RecvMsg(m)
+	return ss.ServerStream.RecvMsg(m)
 }
 
 func (ss *loggingServerStream) SendMsg(m interface{}) error {
 	grpclog.Infof("send message: %T at %s", m, time.Now().Format(time.RFC3339))
-	return ss.SendMsg(m)
+	return ss.ServerStream.SendMsg(m)
 }
 
 func tracingInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
@@ -39,7 +46,7 @@ func tracingInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.Stream
 }
 
 func main() {
-	listen, err := net.Listen("tcp", "0.0.0.0:8888")
+	listen, err := net.Listen("tcp", fmt.Sprintf("%s:%d", *host, *port))
 	if err != nil {
 		grpclog.Fatalf("failed to listen: %v", err)
 	}
@@ -54,7 +61,7 @@ func main() {
 		grpc.KeepaliveParams(keepaliveOpts),
 		grpc.StreamInterceptor(tracingInterceptor),
 	)
-	chantroom.RegisterChatRoomServer(server, service.New())
+	chatroom.RegisterChatRoomServer(server, service.New())
 
 	err = server.Serve(listen)
 	if err != nil {

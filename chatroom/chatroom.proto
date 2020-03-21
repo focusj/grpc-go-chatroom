@@ -1,10 +1,16 @@
 syntax = "proto3";
 
-package routeguide;
+package chatroom;
 
 service ChatRoom {
+    // Chat is bidirectional streaming method
     rpc Chat (stream Message) returns (stream Message) {
     }
+
+    // Tell is just send sth. out
+    rpc Tell (Message) returns (Empty) {
+    }
+
 }
 
 message User {

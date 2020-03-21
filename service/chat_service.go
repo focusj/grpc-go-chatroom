@@ -1,25 +1,31 @@
 package service
 
 import (
-	cr "github.com/focusj/grpc-go-chatroom/chatroom"
+	"context"
+	pb "github.com/focusj/grpc-go-chatroom/chatroom"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"io"
+	"os"
+	"strconv"
 	"sync"
+	"time"
 )
 
 type ChatServer struct {
 	sync.RWMutex
 
-	cr.UnimplementedChatRoomServer
+	pb.UnimplementedChatRoomServer
 
-	groups map[int64]*cr.Group
+	groups map[int64]*pb.Group
 
-	channels map[int64]cr.ChatRoom_ChatServer
+	channels map[int64]pb.ChatRoom_ChatServer
 }
 
-func (c *ChatServer) register(uid int64, srv cr.ChatRoom_ChatServer) {
+func (c *ChatServer) register(uid int64, srv pb.ChatRoom_ChatServer) {
 	c.Lock()
 	defer c.Unlock()
 	grpclog.Infof("user of %d is login", uid)
@@ -35,7 +41,7 @@ func (c *ChatServer) unRegister(uid int64) {
 	delete(c.channels, uid)
 }
 
-func (c *ChatServer) deliver(groupId int64, msg *cr.Message) {
+func (c *ChatServer) deliver(groupId int64, msg *pb.Message) {
 	group := c.groups[groupId]
 	for _, uid := range group.Members {
 		if ch, exists := c.channels[uid]; exists {
@@ -53,17 +59,17 @@ func (c *ChatServer) deliver(groupId int64, msg *cr.Message) {
 }
 
 func New() *ChatServer {
-	groups := make(map[int64]*cr.Group)
-	groups[1] = &cr.Group{
+	groups := make(map[int64]*pb.Group)
+	groups[1] = &pb.Group{
 		Id:      1,
 		Name:    "grpc-go-chat-group",
 		Members: []int64{1, 2, 3},
 	}
-	channels := make(map[int64]cr.ChatRoom_ChatServer)
+	channels := make(map[int64]pb.ChatRoom_ChatServer)
 	return &ChatServer{groups: groups, channels: channels}
 }
 
-func (c *ChatServer) Chat(srv cr.ChatRoom_ChatServer) error {
+func (c *ChatServer) Chat(srv pb.ChatRoom_ChatServer) error {
 	var sender int64
 	for {
 		msg, err := srv.Recv()
@@ -93,4 +99,13 @@ func (c *ChatServer) Chat(srv cr.ChatRoom_ChatServer) error {
 	}
 
 	return status.Errorf(codes.Unimplemented, "method Chat not implemented")
+}
+
+func (c *ChatServer) Tell(ctx context.Context, req *pb.Message) (*pb.Empty, error) {
+	timestamp := strconv.FormatInt(time.Now().UnixNano(), 10)
+	host, _ := os.LookupEnv("HOSTNAME")
+	headers := metadata.New(map[string]string{"Remote-Host": host, "Timestamp": timestamp})
+	grpc.SendHeader(ctx, headers)
+
+	return &pb.Empty{}, nil
 }

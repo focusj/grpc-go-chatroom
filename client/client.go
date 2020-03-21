@@ -16,6 +16,9 @@ import (
 
 var (
 	uid = flag.Int64("user_id", 1, "user id")
+
+	host = flag.String("host", "0.0.0.0", "remote server address")
+	port = flag.Int64("prot", 8888, "remote server port")
 )
 
 func chat(sender int64, stream pb.ChatRoom_ChatClient) {
@@ -24,13 +27,35 @@ func chat(sender int64, stream pb.ChatRoom_ChatClient) {
 			Id:       rand.Int63(),
 			GroupId:  1,
 			Sender:   sender,
-			Content:  fmt.Sprintf("greet from: %d", sender),
+			Content:  fmt.Sprintf("chating from: %d", sender),
 			Type:     0,
 			SendTime: time.Now().UnixNano(),
 		}
 		err := stream.Send(&message)
 		if err != nil {
-			grpclog.Info(err)
+			grpclog.Error(err)
+		}
+		time.Sleep(1 * time.Second)
+	}
+}
+
+func tell(sender int64, client pb.ChatRoomClient) {
+	for {
+		message := pb.Message{
+			Id:       rand.Int63(),
+			GroupId:  1,
+			Sender:   sender,
+			Content:  fmt.Sprintf("telling from: %d", sender),
+			Type:     0,
+			SendTime: time.Now().UnixNano(),
+		}
+
+		var header metadata.MD // variable to store header and trailer
+		_, err := client.Tell(context.Background(), &message, grpc.Header(&header))
+		grpclog.Infof("unary msg from remote: %s as %s", header["Remote_Host"], header["timestamp"])
+
+		if err != nil {
+			grpclog.Errorf("telling failed, %s", err)
 		}
 		time.Sleep(1 * time.Second)
 	}
@@ -45,7 +70,7 @@ func main() {
 		PermitWithoutStream: true,
 	}
 	conn, err := grpc.Dial(
-		"127.0.0.1:8000",
+		fmt.Sprintf("%s:%d", *host, *port),
 		grpc.WithInsecure(),
 		grpc.WithKeepaliveParams(keepaliveParams),
 	)
@@ -56,15 +81,13 @@ func main() {
 
 	client := pb.NewChatRoomClient(conn)
 
-	md := metadata.Pairs("Host", "localhost:8000")
-	ctx := metadata.NewOutgoingContext(context.Background(), md)
-
-	stream, err := client.Chat(ctx)
+	stream, err := client.Chat(context.Background())
 	if err != nil {
 		grpclog.Fatalf("chat failed: %s", err)
 	}
-
 	go chat(*uid, stream)
+
+	go tell(*uid, client)
 
 	go func() {
 		for {
@@ -73,7 +96,7 @@ func main() {
 				grpclog.Error(err)
 				return
 			}
-			grpclog.Infof("receive a message from: %d, detail is: %s", msg.Sender, msg.Content)
+			grpclog.Infof("streaming msg from: %d, detail is: [%s]", msg.Sender, msg.Content)
 		}
 	}()
 
