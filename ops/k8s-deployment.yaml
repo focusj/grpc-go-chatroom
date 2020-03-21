@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grpc-go-chatroom
+  labels:
+    app: prod
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: chatroom
+  template:
+    metadata:
+      labels:
+        app: chatroom
+    spec:
+      containers:
+        - name: chatroom
+          image: focusjx/chatroom:latest
+          ports:
+          - name: grpc
+            containerPort: 8888
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "10m"
+            limits:
+              memory: "64Mi"
+              cpu: "20m"

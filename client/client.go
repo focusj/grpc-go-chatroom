@@ -7,6 +7,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
 	"math/rand"
 	"time"
 
@@ -44,7 +45,7 @@ func main() {
 		PermitWithoutStream: true,
 	}
 	conn, err := grpc.Dial(
-		"127.0.0.1:8888",
+		"127.0.0.1:8000",
 		grpc.WithInsecure(),
 		grpc.WithKeepaliveParams(keepaliveParams),
 	)
@@ -55,7 +56,10 @@ func main() {
 
 	client := pb.NewChatRoomClient(conn)
 
-	stream, err := client.Chat(context.Background())
+	md := metadata.Pairs("Host", "localhost:8000")
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+
+	stream, err := client.Chat(ctx)
 	if err != nil {
 		grpclog.Fatalf("chat failed: %s", err)
 	}
