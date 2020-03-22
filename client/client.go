@@ -52,7 +52,7 @@ func tell(sender int64, client pb.ChatRoomClient) {
 
 		var header metadata.MD // variable to store header and trailer
 		_, err := client.Tell(context.Background(), &message, grpc.Header(&header))
-		grpclog.Infof("unary msg from remote: %s as %s", header["remote-host"], header["timestamp"])
+		grpclog.Infof("unary msg from remote: %s at %s", header["remote-host"], header["timestamp"])
 
 		if err != nil {
 			grpclog.Errorf("telling failed, %s", err)
@@ -81,7 +81,7 @@ func main() {
 
 	client := pb.NewChatRoomClient(conn)
 
-	stream, err := client.Chat(context.Background())
+	stream, err := client.Chat(context.Background(), )
 	if err != nil {
 		grpclog.Fatalf("chat failed: %s", err)
 	}
@@ -96,7 +96,8 @@ func main() {
 				grpclog.Error(err)
 				return
 			}
-			grpclog.Infof("streaming msg from: %d, detail is: [%s]", msg.Sender, msg.Content)
+			header, _ := stream.Header()
+			grpclog.Infof("streaming msg: %s, from: %d, detail is: [%s]", header.Get("remote-host"), msg.Sender, msg.Content)
 		}
 	}()
 

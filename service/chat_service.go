@@ -45,6 +45,11 @@ func (c *ChatServer) deliver(groupId int64, msg *pb.Message) {
 	group := c.groups[groupId]
 	for _, uid := range group.Members {
 		if ch, exists := c.channels[uid]; exists {
+			timestamp := strconv.FormatInt(time.Now().UnixNano(), 10)
+			host, _ := os.LookupEnv("HOSTNAME")
+			headers := metadata.New(map[string]string{"Remote-Host": host, "Timestamp": timestamp})
+			ch.SendHeader(headers)
+
 			err := ch.Send(msg)
 			if err != nil {
 				if e, ok := status.FromError(err); ok {
@@ -104,7 +109,7 @@ func (c *ChatServer) Chat(srv pb.ChatRoom_ChatServer) error {
 func (c *ChatServer) Tell(ctx context.Context, req *pb.Message) (*pb.Empty, error) {
 	timestamp := strconv.FormatInt(time.Now().UnixNano(), 10)
 	host, _ := os.LookupEnv("HOSTNAME")
-	headers := metadata.New(map[string]string{"Remote-Host": host, "Timestamp": timestamp})
+	headers := metadata.New(map[string]string{"remote-host": host, "timestamp": timestamp})
 	grpc.SendHeader(ctx, headers)
 
 	return &pb.Empty{}, nil
