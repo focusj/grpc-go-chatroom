@@ -18,7 +18,7 @@ var (
 	uid = flag.Int64("user_id", 1, "user id")
 
 	host = flag.String("host", "0.0.0.0", "remote server address")
-	port = flag.Int64("prot", 8888, "remote server port")
+	port = flag.Int64("port", 8888, "remote server port")
 )
 
 func chat(sender int64, stream pb.ChatRoom_ChatClient) {
@@ -52,7 +52,7 @@ func tell(sender int64, client pb.ChatRoomClient) {
 
 		var header metadata.MD // variable to store header and trailer
 		_, err := client.Tell(context.Background(), &message, grpc.Header(&header))
-		grpclog.Infof("unary msg from remote: %s as %s", header["Remote_Host"], header["timestamp"])
+		grpclog.Infof("unary msg from remote: %s as %s", header["remote-host"], header["timestamp"])
 
 		if err != nil {
 			grpclog.Errorf("telling failed, %s", err)
